@@ -53,8 +53,7 @@
 		notify : function (title, message, priority)
 		{
 			var $toaster  = this.gettoaster();
-			var delimiter = (title && message) ? settings.toast.defaults.delimiter : '';
-			var $toast    = $(settings.toast.template.replace('%priority%', priority).replace('%delimiter%', delimiter)).hide().css(settings.toast.css).addClass(settings.toast['class']);
+			var $toast    = $(settings.toast.template.replace('%priority%', priority)).css(settings.toast.css).addClass(settings.toast['class']);
 
 			$('.title', $toast).css(settings.toast.csst).html(title);
 			$('.message', $toast).css(settings.toast.cssm).html(message);
@@ -64,19 +63,16 @@
 				console.log(toast);
 			}
 
-			$toaster.append(settings.toast.display($toast));
-
-			if (settings.donotdismiss.indexOf(priority) === -1)
-			{
-				var timeout = (typeof settings.timeout === 'number') ? settings.timeout : ((typeof settings.timeout === 'object') && (priority in settings.timeout)) ? settings.timeout[priority] : 1500;
-				setTimeout(function()
-				{
-					settings.toast.remove($toast, function()
-					{
-						$toast.remove();
-					});
-				}, timeout);
+			$toast.on('hidden.bs.toast', function(){
+				$toast.remove();
+			});
+			var timeout;
+			if (settings.donotdismiss.indexOf(priority) === -1){
+				timeout = (typeof settings.timeout === 'number') ? settings.timeout : ((typeof settings.timeout === 'object') && (priority in settings.timeout)) ? settings.timeout[priority] : 3000;
+			} else {
+				timeout = 0;
 			}
+			$toaster.append(settings.toast.display($toast, timeout));
 		}
 	};
 
@@ -101,19 +97,22 @@
 		'toast'       :
 		{
 			'template' :
-			'<div class="alert alert-%priority% alert-dismissible" role="alert">' +
-				'<button type="button" class="close" data-dismiss="alert">' +
-					'<span aria-hidden="true">&times;</span>' +
-					'<span class="sr-only">Close</span>' +
-				'</button>' +
-				'<span class="title"></span>%delimiter% <span class="message"></span>' +
+			'<div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-animation="true" data-autohide="false">' +
+				'<div class="toast-header"> ' +
+					'<strong class="mr-auto text-%priority% title"></strong>' +
+					'<button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">' +
+						'<span aria-hidden="true">&times;</span>' +
+					'</button>' +
+				'</div>' +
+				'<div class="toast-body">' +
+					'<span class="message"></span>' +
+				'</div>' +
 			'</div>',
 
 			'defaults' :
 			{
-				'title'     : 'Notice',
+				'title'     : '提示',
 				'priority'  : 'success',
-				'delimiter' : ':'
 			},
 
 			'css'      : {},
@@ -122,30 +121,36 @@
 
 			'fade'     : 'slow',
 
-			'display'    : function ($toast)
+			'display'    : function ($toast, timeout)
 			{
-				return $toast.fadeIn(settings.toast.fade);
+				if(timeout > 0){
+					$toast.toast({
+						autohide: true,
+						delay: timeout,
+					});
+				}
+				$toast.css('opacity', 0);
+				let ret = $toast.toast('show');
+				setTimeout(function(){
+					$toast.css('opacity', 1);
+				});
+				setTimeout(function(){
+					$toast.css('opacity', '');
+				}, 200);
+				return ret;
 			},
 
 			'remove'     : function ($toast, callback)
 			{
-				return $toast.animate(
-					{
-						opacity : '0',
-						padding : '0px',
-						margin  : '0px',
-						height  : '0px'
-					},
-					{
-						duration : settings.toast.fade,
-						complete : callback
-					}
-				);
+				setTimeout(function(){
+					callback();
+				}, 1000);
+				return $toast.toast('hide');
 			}
 		},
 
 		'debug'        : false,
-		'timeout'      : 1500,
+		'timeout'      : 5000,
 		'stylesheet'   : null,
 		'donotdismiss' : []
 	};
